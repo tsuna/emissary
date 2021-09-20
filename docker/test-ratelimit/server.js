@@ -39,6 +39,9 @@ const ratelimit = protoDescriptor.pb.lyft.ratelimit;
 
 	console.log("========>");
 	console.log(call.request.domain);
+	call.on('data', function() {
+		console.log('hello world');
+	});
 	call.request.descriptors.forEach((descriptor) => {
 		descriptor.entries.forEach((entry) => {
 			console.log(`  ${entry.key} = ${entry.value}`);
@@ -117,7 +120,7 @@ async function main() {
 	myServer.start();
 	console.log(`Listening on GRPC port ${GRPC_PORT}, TLS: ${USE_TLS}`);
 
-	
+	var client = new ratelimit.RateLimitService();
 
 }
 main();
