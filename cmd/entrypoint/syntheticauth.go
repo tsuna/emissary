@@ -5,6 +5,7 @@ import (
 	//"github.com/datawire/dlib/derror"
 	"github.com/datawire/ambassador/v2/pkg/api/getambassador.io/v3alpha1"
 	"github.com/datawire/ambassador/v2/pkg/kates"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // This is a gross hack to remove all AuthServices using protocol_version: v2 only when running Edge-Stack and then inject an
@@ -46,6 +47,22 @@ func ReconcileAuthServices(ctx context.Context, sh *SnapshotHolder, deltas *[]*k
 			authServices = append(authServices, authService)
 		}
 	}
+
+	// Also loop over the annotations and remove authservices that are not v3
+	var annotations []*kates.Unstructured
+	for _, list := range sh.k8sSnapshot.Annotations {
+		for _, a := range list {
+			authAnnotation := a.(*kates.Unstructured)
+			if authAnnotation.GetKind() == "AuthService" && authAnnotation.GetAPIVersion() == "getambassador.io/v3alpha1" {
+				protoVersion := getNestedString(authAnnotation.Object, "spec", "protocol_version")
+				if protoVersion == "v3" {
+					annotations = append(annotations, authAnnotation)
+				}
+			}
+		}
+	}
+	sh.k8sSnapshot.Annotations = annotations
+
 	if len(authServices) == 0 && !syntheticAuthExists {
 		// There are no valid AuthServices with protocol_version: v3. A synthetic one needs to be injected.
 		authServices = append(authServices, syntheticAuth)
